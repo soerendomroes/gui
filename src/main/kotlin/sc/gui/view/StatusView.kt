@@ -5,6 +5,9 @@ import javafx.geometry.Pos
 import javafx.scene.control.Label
 import javafx.scene.layout.Priority
 import javafx.scene.paint.Color
+import javafx.scene.text.Font
+import javafx.scene.text.FontPosture
+import javafx.scene.text.FontWeight
 import javafx.scene.text.TextAlignment
 import sc.api.plugins.ITeam
 import sc.api.plugins.Team
@@ -13,6 +16,40 @@ import sc.gui.model.AppModel
 import sc.gui.model.GameModel
 import sc.gui.strings
 import tornadofx.*
+
+fun decodeXmlEntities(toDecode: String): String {
+    if ('&' !in toDecode) return toDecode
+    // Replace potentially bad characters
+    return toDecode.replace("&lt;", "<")
+                   .replace("&gt;", ">")
+                   .replace("&#38;", "&")
+                   .replace("&quot;", "\"")
+}
+
+fun playerLabel(game: GameModel, team: Team) =
+    Label().apply {
+        // Add string to display for team including teamStats.
+        textProperty().bind(
+            game.gameState.stringBinding { state ->
+                state?.teamStats(team)?.takeUnless { it.isEmpty() }?.let { stats ->
+                    stats.joinToString(
+                        "\n",
+                        "${decodeXmlEntities(game.playerNames[team.index])} (${strings["color.${team.color}"]})\n"
+                    ) { stat ->
+                        "${stat.label} ${stat.icon?.let { if(stat.value > 0) it.repeat(stat.value) else "-" } ?: stat.value}"
+                    }
+                }
+            })
+        // Handle theming
+        textFillProperty().bind(AppModel.darkMode.objectBinding {
+            if(it == true)
+                Color.hsb(Color.valueOf(team.color).hue, .4, 1.0)
+            else
+                Color.hsb(Color.valueOf(team.color).hue, .8, .6)
+        })
+        font = Font(AppStyle.fontSizeRegular.value * 1.2)
+        
+    }
 
 class StatusBinding(private val game: GameModel): StringBinding() {
     init {
@@ -23,15 +60,16 @@ class StatusBinding(private val game: GameModel): StringBinding() {
         if(game.gameStarted.value && game.atLatestTurn.value || game.gameResult.value != null)
             game.gameResult.takeIf { game.atLatestTurn.value }?.get()?.let { gameResult ->
                 """
-                    ${gameResult.win?.winner?.let { "${it.displayName} hat gewonnen!" } ?: "Unentschieden"}
-                    ${gameResult.win?.reason?.message?.replace(" brig", " übrig").orEmpty()}
+                    ${gameResult.win?.winner?.let { "${decodeXmlEntities(it.displayName)} hat gewonnen!" } ?: "Unentschieden"}
+                    ${decodeXmlEntities(gameResult.win?.reason?.message?.replace(" brig", " übrig").orEmpty())}
                     """.trimIndent().trim('\n')
-            } ?: "${game.currentTeam.value.displayName} am Zug"
+            } ?: "${decodeXmlEntities(game.currentTeam.value.displayName)} am Zug"
         else game.playerNames.joinToString(" vs ")
     
     val ITeam.displayName
         get() = index.let { game.playerNames.getOrNull(it) ?: "Spieler ${it + 1}" }
 }
+
 
 class ScoreBinding(private val game: GameModel): StringBinding() {
     init {
@@ -53,15 +91,19 @@ class StatusView: View() {
     private val game: GameModel by inject()
     
     override val root = hbox {
+        // The StatusView uses the full width and centers all elements
         useMaxWidth = true
         alignment = Pos.CENTER
-        add(playerLabel(Team.ONE))
+        // Player one is on the left
+        // add(playerLabel(Team.ONE))
+        // This is the status text of the game, i.e. "X ist am Zug\n Runde 0 - 10 : 10"
         vbox(alignment = Pos.CENTER) {
             this.spacing = AppStyle.fontSizeUnscaled.value
             runLater {
                 prefWidthProperty().bind(scene.widthProperty().divide(2))
                 hgrow = Priority.ALWAYS
                 maxWidth = AppStyle.fontSizeRegular.value * 60
+                prefHeightProperty().bind(scene.heightProperty().divide(6))
             }
             addClass(AppStyle.statusLabel)
             label(StatusBinding(game)) {
@@ -70,7 +112,8 @@ class StatusView: View() {
             }
             label(ScoreBinding(game))
         }
-        add(playerLabel(Team.TWO))
+        // Player 2 is on the right
+        // add(playerLabel(Team.TWO))
         
         //runLater {
         //    scene.root.apply {
@@ -92,17 +135,19 @@ class StatusView: View() {
     
     fun playerLabel(team: Team) =
         Label().apply {
+            // Add string to display for team including teamStats.
             textProperty().bind(
                 game.gameState.stringBinding { state ->
                     state?.teamStats(team)?.takeUnless { it.isEmpty() }?.let { stats ->
                         stats.joinToString(
                             "\n",
-                            "${game.playerNames[team.index]} (${strings["color.${team.color}"]})\n"
+                            "${decodeXmlEntities(game.playerNames[team.index])} (${strings["color.${team.color}"]})\n"
                         ) { stat ->
                             "${stat.label} ${stat.icon?.let { if(stat.value > 0) it.repeat(stat.value) else "-" } ?: stat.value}"
                         }
                     }
                 })
+            // Handle theming
             textFillProperty().bind(AppModel.darkMode.objectBinding {
                 if(it == true)
                     Color.hsb(Color.valueOf(team.color).hue, .4, 1.0)
