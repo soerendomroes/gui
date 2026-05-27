@@ -47,7 +47,7 @@ fun playerLabel(game: GameModel, team: Team) =
             else
                 Color.hsb(Color.valueOf(team.color).hue, .8, .6)
         })
-        font = Font(AppStyle.fontSizeRegular.value * 1.2)
+        font = Font(AppStyle.fontSizeBig.value)
         
     }
 
