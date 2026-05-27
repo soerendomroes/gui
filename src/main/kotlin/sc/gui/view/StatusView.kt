@@ -102,7 +102,7 @@ class StatusView: View() {
             runLater {
                 prefWidthProperty().bind(scene.widthProperty().divide(2))
                 hgrow = Priority.ALWAYS
-                maxWidth = AppStyle.fontSizeRegular.value * 60
+                maxWidth = AppStyle.fontSizeRegular.value * 90
                 prefHeightProperty().bind(scene.heightProperty().divide(6))
             }
             addClass(AppStyle.statusLabel)
