@@ -65,7 +65,7 @@ class StatusBinding(private val game: GameModel): StringBinding() {
                     ${decodeXmlEntities(gameResult.win?.reason?.message?.replace(" brig", " übrig").orEmpty())}
                     """.trimIndent().trim('\n')
             } ?: "${decodeXmlEntities(game.currentTeam.value.displayName)} am Zug"
-        else game.playerNames.joinToString(" vs ")
+        else game.playerNames.map { decodeXmlEntities(it) }.joinToString(" vs ")
     
     val ITeam.displayName
         get() = index.let { game.playerNames.getOrNull(it) ?: "Spieler ${it + 1}" }
@@ -77,15 +77,22 @@ class ScoreBinding(private val game: GameModel): StringBinding() {
         bind(game.gameStarted, game.gameState)
     }
     
-    override fun computeValue(): String =
-        if(game.gameStarted.value)
-            "Runde ${(game.currentTurn.get() + 1) / 2} - " +
-            game.gameState.value?.run {
-                Team.values().sortedBy { it != startTeam }.joinToString(" : ") {
-                    getPointsForTeam(it).first().toString()
-                }
-            }
-        else "Drücke auf Start".takeUnless { game.gameOver.value && game.atLatestTurn.value }.orEmpty()
+    /**
+     * A ScoreBinding should have the following computed String value:
+     * Runde X - Punkte Team 1 : Punkte Team 2
+     * This point order is inverted if the startTeam is Team.TWO.
+     * This is only used for the finals.
+     */
+    override fun computeValue(): String {
+        if(game.gameStarted.value) {
+            return "Runde ${(game.currentTurn.get() + 1) / 2} - " +
+                   game.gameState.value?.getPointsForTeam(Team.ONE)?.first().toString() +
+                   " : " +
+                   game.gameState.value?.getPointsForTeam(Team.TWO)?.first().toString()
+        } else {
+            return "Drücke auf Start".takeUnless { game.gameOver.value && game.atLatestTurn.value }.orEmpty()
+        }
+    }
 }
 
 class StatusView: View() {
