@@ -16,7 +16,7 @@ class PlayerTwoView: View() {
         // Run this later since scene is not ready yet
         runLater {
             prefWidthProperty().bind(scene.widthProperty().divide(4))
-            this.padding = Insets(0.0, scene.width / 100, 0.0, scene.width / 100)
+            this.padding = Insets(0.0, 0.0, 0.0, 0.0)
         }
         alignment = Pos.TOP_CENTER
         add(playerLabel(game, Team.TWO))

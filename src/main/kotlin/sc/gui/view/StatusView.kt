@@ -18,11 +18,12 @@ import sc.gui.strings
 import tornadofx.*
 
 fun decodeXmlEntities(toDecode: String): String {
-    if ('&' !in toDecode) return toDecode
+//    if ('&' !in toDecode) return toDecode
     // Replace potentially bad characters
     return toDecode.replace("&lt;", "<")
                    .replace("&gt;", ">")
                    .replace("&#38;", "&")
+                    .replace("&amp;", "&")
                    .replace("&quot;", "\"")
 }
 
