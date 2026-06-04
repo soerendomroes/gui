@@ -1,5 +1,6 @@
 package sc.gui.view.game
 
+import javafx.animation.Animation
 import javafx.application.Platform
 import javafx.geometry.Insets
 import javafx.geometry.Point2D
@@ -71,6 +72,29 @@ class PiranhasBoard: GameBoard<GameState>() {
         }
         
         state?.let { state ->
+            
+            var posRemoved = state.lastMove?.let { move ->
+                if(oldState?.turn?.minus(state.turn) == -1) {
+                    GameRuleLogic.targetCoordinates(oldState.board, move)
+                } else {
+                    null
+                }
+            }
+            var removedNoPiranhaInLastMove = state.lastMove?.let { move ->
+                if(oldState?.turn?.minus(state.turn) == -1) {
+                    oldState.board.get(posRemoved)?.isEmpty ?: false
+                } else {
+                    false
+                }
+            }
+            var removedPiranha = state.lastMove?.let { move ->
+                if(oldState?.turn?.minus(state.turn) == -1) {
+                    oldState.board.get(posRemoved)
+                } else {
+                    null
+                }
+            }
+            
             val move = state.lastMove?.let { move ->
                 if(oldState?.turn?.minus(state.turn) == -1) {
                     move.from to GameRuleLogic.targetCoordinates(oldState.board, move)
@@ -79,6 +103,15 @@ class PiranhasBoard: GameBoard<GameState>() {
                 }
             }
             state.board.forEach { (pos: Coordinates, field: FieldState) ->
+                var removedPiece: PieceImage? = null
+                if (removedNoPiranhaInLastMove == false && pos.equals(posRemoved)) {
+                    removedPiece = PieceImage(
+                        gridSize,
+                        removedPiranha?.team.let { team -> "${team}_${removedPiranha?.size}" } ?: (removedPiranha?.name?.lowercase()
+                                                                                                   ?: "empty"))
+                    
+                    addToGrid(removedPiece, pos)
+                }
                 val piece = PieceImage(
                     gridSize,
                     field.team?.let { team -> "${team}_${field.size}" } ?: field.name.lowercase())
@@ -90,7 +123,12 @@ class PiranhasBoard: GameBoard<GameState>() {
                     piece.effect = Glow(0.2)
                     piece.translateX = offset.dx * gridSize.value
                     piece.translateY = - offset.dy * gridSize.value
-                    piece.move(transitionDuration, Point2D.ZERO)
+                    // remove removedPiece after animation finishes
+                    val animation = piece.move(transitionDuration, Point2D.ZERO)
+                    animation.setOnFinished {
+                        removedPiece?.removeFromParent()
+                        piece.effect = null
+                    }
                 }
                 
                 if(field.team == null)
